@@ -10,28 +10,28 @@ const server = http.serve({ port: 8080 });
 for await (const req of server) handleReq(req);
 
 async function handleReq(req: http.ServerRequest) {
-  let path = req.url;
+  let relPath = req.url;
 
   // Protect against directory traversal attacks
-  if (path.includes("..")) { return await req.respond({ status: 400 }); }
+  if (relPath.includes("..")) { return await req.respond({ status: 400 }); }
 
   // Serve index by default
-  if (path === "/") path = "/index.html";
+  if (relPath === "/") relPath = "/index.html";
 
   let body: Deno.Reader | string;
-  try { body = await Deno.open(publicPath + path); }
+  try { body = await Deno.open(publicPath + relPath); }
   catch { return await req.respond({ status: 404, body: "Not found." }); }
 
-  if (path.endsWith(".ts")) {
+  if (relPath.endsWith(".ts")) {
     // Use Sucrase to remove type annotations on the fly to turn TypeScript into JavaScript
     const tsCode = textDecoder.decode(await Deno.readAll(body));
     body = sucrase.transform(tsCode, { transforms: ["typescript"] }).code;
   }
 
   let contentType = "";
-  if (path.endsWith(".html")) contentType = "text/html";
-  else if (path.endsWith(".js")) contentType = "text/javascript";
-  else if (path.endsWith(".ts")) contentType = "text/javascript";
+  if (relPath.endsWith(".html")) contentType = "text/html";
+  else if (relPath.endsWith(".js")) contentType = "text/javascript";
+  else if (relPath.endsWith(".ts")) contentType = "text/javascript";
   // TODO: Add more media types for each extension as needed
 
   return await req.respond({ headers: new Headers({ "content-type": contentType }), body: body });
